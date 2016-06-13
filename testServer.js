@@ -1,24 +1,23 @@
 var express = require('express');
-
-var app = express();
-
 var bodyParser = require('body-parser');
 
+var app = express();
+app.use(bodyParser.json());
 
 var MongoClient = require('mongodb').MongoClient , assert = require('assert');
 var ObjectID = require('mongodb').ObjectID;
 var url = "mongodb://localhost:27017/PollingSystem";
 var dbConnection= undefined;
 
-app.use(bodyParser.json());
 
-/* app.use(function(req, res, next) {
+
+app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   
   next();
-}); */
+});
 //////////////////////////////////////////////////////////////////////////////
 
 var connection=undefined;
@@ -27,7 +26,7 @@ connectMongoDB=function (err,db) {
 	connection=db;
 	assert.equal(null,err);
 	
-	console.log('MongoDB connected..');	
+	console.log('MongoDB connected..');		
 }
 
 welcomePage=function(req,res){
@@ -42,60 +41,189 @@ disconnectDB=function (dbConnection){
 	console.log('MongoDB connection closed');
 }
 
+//get Employee Objects by their IDs
+getEmployeesById = function(empID){
+		console.log('start getempID');
+		var employees = connection.collection("employees");
+		
+		employees.findOne({ _id : empID}, function(err , doc){
+				return doc;
+		});
+		
+		console.log('end getempID');
+		
+}
 
 //get All the Groups
 
 getAllGroups=function(req,res){
-		console.log('request received');
-		responseObject = new Object();
-		var employees = connection.collection("employees");
-		employees.find({}, {_id : 0 , id: 1}).toArray(function(err,docs){
-			assert.equal(err,null);
-			
-			if(err)
-			{
-				console.log('error');
-			}
-			else
-			{
-					console.log('found: \n ' + JSON.stringify(docs));
-					responseObject.groups=docs;
-					
-					res.writeHead(200, {'content-type' : 'application/json'})
-					
-					console.log('response: ' + JSON.stringify(responseObject));
-					res.end(JSON.stringify(responseObject));
-			}
+	console.log('request received');
 		
+	var groups = connection.collection('groups');
+	
+	groups.find({}).toArray(function(err,docs){
+		res.setHeader('Content-Type', 'application/json');
+		res.json(docs);
+		res.end();
+	});
+}
+
+getAllEmployees = function(req,res){
+	console.log('request for all employees..');
+	
+	var employees = connection.collection('employees');
+	
+	employees.find({}).toArray(function(err,docs){
+		res.setHeader('Content-Type', 'application/json');
+		res.json(docs);
+		res.end();
+	});
+}
+
+getEmployeesForGroup=function(req,res){
+	/*
+		req should be in following form  (array of employeeIDs):
+							{
+					"ListEmployees": [
+							{
+							  "member": "575bbc1492590d0114f5fe93"
+							},
+							{
+							  "member": "575bbc2992590d0114f5fe94"
+							},
+							{
+							  "member": "575bbc3992590d0114f5fe95"
+							}
+						  ]
+					}
+	*/
+
+		
+	list = req.body.ListEmployees
+		
+		var employees = connection.collection('employees');
+		
+		id_array = [];
+		for(var i in list)
+		{
+			id_array.push({ _id : new ObjectID(list[i].member)});
+		}
+		
+		employees.find({$or : id_array }).toArray(function(err , data){
+			res.setHeader('Content-Type', 'application/json');
+			res.json(data);
+			res.end();
 		});
 }
 
-getEmployees=function(){
-	employees.find({},{id : 1, _id : 0});
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+testFunction = function(req,res){
+		
+		
+		
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 //Create a Group of Employees
 
 createNewGroup=function(req,res){
-	var data = {employeeID: req.body.eid, groupName: req.body.groupName, listEmployees: req.body.list};
+	
+	console.log("request received.............");
+	
+	var data = { employeeID : req.body.eid, groupName : req.body.groupName, listEmployees : req.body.members};
+	
+	console.log("creating new group : " + JSON.stringify(req.body));
+	
+	list = req.body.members;
+	
+	id_array = [];
+	for(var i in list)
+	{
+		id_array.push({ member_id : new ObjectID(list[i].member_id)});
+	}
 	
 	var groups = connection.collection("groups");
 	
+	//grpname , eid who created , members' IDs
+	// check if grpname already exists
  	groups.insertOne({
+		groupName : data.groupName,
+		eid : data.employeeID,
+		members : id_array
+	},	function(err,result){
+			res.setHeader('Content-Type', 'application/json');
+			if(err){
+				
+				var respo = {inserted : 'false'};
+				res.json(respo);
+				res.end();
+			}
+			assert.equal(err,null);
+			console.log("Inserted Group with Name: " + data.groupName);
+			var respo = {inserted : 'true'};
+			res.json(respo);
+			res.end();
+		}
+	); 
+}
+
+groupAvailable=function(req,res){
+		var grp = req.body.groupName;
+			
+		var groups = connection.collection("groups");
 		
-	}); 
+		console.log('searching for ' + grp);
+		
+		groups.findOne({groupName : grp}, function(err, doc){
+			if(err){
+				console.error(err);
+			}
+			else{
+				console.log('read one doc: ' + JSON.stringify(doc));
+				
+				responseObject = new Object();
+				
+				if(doc == null){
+					//group doesn't exist already. i.e. groupName suggested by client is available.
+					responseObject.flag = 'true';
+				}
+				else{
+					responseObject.flag = 'false';
+				}
+				res.end(JSON.stringify(responseObject));
+			}
+		});
 	
-	res.end("Done");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 MongoClient.connect(url,connectMongoDB);
 
 app.get('/',welcomePage)
-app.get('/Groups',getAllGroups)
-//app.get('/groupAvailability',groupAvailable)
 
-app.post('/CreateNewGroup',createNewGroup)
+//Groups API
+app.get('/Groups',getAllGroups);
+app.post('/Groups',createNewGroup);
+app.post('/group/employees',getEmployeesForGroup);
+app.post('/groupAvailability',groupAvailable);
+
+
+//employees
+app.get('/employees',getAllEmployees);
+
+//
+
+
+
+
 app.get('/disconnectDB',disconnectDB)
+
+app.post('/testing',testFunction)
+app.get('/testing',testFunction)
+app.put('/testing',testFunction)
 
 app.listen(8081);

@@ -15,6 +15,6 @@ app.controller('GroupsController', function($scope,$http,$state) {
 		}).then(function successCall(response){
 			$scope.list = response.data.groups;
 		}, function failureCall(response){
-			alert($scope.list);
+			alert($response);
 		});
 });

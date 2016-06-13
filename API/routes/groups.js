@@ -5,16 +5,25 @@ var Server = mongo.Server,
       BSON = mongo.BSONPure;
 
 var server = new Server('localhost', 27017, {auto_reconnect: true});
-        db = new Db('GroupsDB', server);
+        db = new Db('PollingSystem', server);
 
+/*
+app.get ('/groups/default', groups.ListDefault);
+app.post('/groups',         groups.Add);
+app.get ('/groups',         groups.ListAll);
+app.get ('/groups/:id',     groups.List);
+//app.put ('/groups/:id',     groups.Update);
+app.delete('/groups/:id',   groups.Delete);
+*/		
+		
 db.open(function(err, db) {
-    if(!err) {
-        console.log("Connected to 'GroupsDB' database");
-        db.collection('groups', {strict:true}, function(err, collection) {
-            if (err) {
-                console.log("The 'groups' collection doesn't exist. Creating it with sample data...");
-                populateDB();
+	if (err) {
+                console.log("The 'groups' collection doesn't exist....");
+                //populateDB();
             }
+    else {
+        console.log("Connected to 'PollingSystem' database");
+        db.collection('groups', {strict:true}, function(err, collection) {   
         });
     }
 });
@@ -34,6 +43,7 @@ exports.ListAll = function(req, res) {
     console.log('Listing all groups');
     db.collection('groups', function(err, collection) {
         collection.find().toArray(function(err, items) {
+			console.log('Sending....');
             res.send(items);
         });
     });
@@ -65,7 +75,7 @@ exports.Add = function(req, res) {
     });
 }
 
-exports.Update = function(req, res) {
+/* exports.Update = function(req, res) {
     var id = req.params.id;
     var group = req.body;
     console.log('Updating group: ' + id);
@@ -81,7 +91,7 @@ exports.Update = function(req, res) {
             }
         });
     });
-}
+} */
 
 exports.Delete = function(req, res) {
     var id = req.params.id;
@@ -101,7 +111,7 @@ exports.Delete = function(req, res) {
 /*--------------------------------------------------------------------------------------------------------------------*/
 // Populate database with sample data -- Only used once: the first time the application is started.
 // You'd typically not find this code in a real-life app, since the database would already exist.
-var populateDB = function() {
+/* var populateDB = function() {
 
     var groups = [
     {
@@ -142,4 +152,4 @@ var populateDB = function() {
         collection.insert(groups, {safe:true}, function(err, result) {});
     });
 
-};
+}; */

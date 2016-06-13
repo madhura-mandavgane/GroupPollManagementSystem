@@ -7,18 +7,29 @@ var app = express();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json);
 
+var serverIP = "http://localhost";
+var serverPort = 9090;
+//to do: create vars for url port of db 
 
-var server = app.listen(9090,function () {
- console.log("Example app listening at 9090");
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  
+  next();
+});
+
+var server = app.listen(serverPort,function () {
+ console.log("Example app listening at " + serverPort);
 });
 
 app.get('/', function(req, res) {
     res.end("Hello World");
 });
 
-app.get ('/groups/default', groups.ListDefault);
+app.get ('./routes/groups/default', groups.ListDefault);
 app.post('/groups',         groups.Add);
-app.get ('/groups',         groups.ListAll);
+app.get ('./routes/groups',         groups.ListAll);
 app.get ('/groups/:id',     groups.List);
-app.put ('/groups/:id',     groups.Update);
+//app.put ('/groups/:id',     groups.Update);
 app.delete('/groups/:id',   groups.Delete);
