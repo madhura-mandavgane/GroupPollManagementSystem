@@ -41,6 +41,34 @@ disconnectDB=function (dbConnection){
 	console.log('MongoDB connection closed');
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+loginEmployee=function(req,res){
+		console.log('login request : ' + JSON.stringify(req.body));
+		var data = { username : req.body.username, password : req.body.password };
+		
+		var employees = connection.collection("employees");
+		
+		employees.findOne( { $and : [{ username : data.username } , {password : data.password} ] }, function(err , doc){
+				res.setHeader('Content-Type', 'application/json');
+				assert.equal(err,null);
+				if(doc == null){
+					res.setErr
+					var obj = { message : "Username not found"};
+					res.json(obj);
+					console.log( " Username not found" + err);
+					res.end();
+				}
+				else{
+					//res.setHeader('200','OK');
+					res.json(doc);
+					res.end();
+				}
+				
+		});
+}
+
+
 //get Employee Objects by their IDs
 getEmployeesById = function(req,res){
 		console.log('start getempID' + JSON.stringify(req.body));
@@ -132,28 +160,7 @@ getEmployeesForGroup=function(req,res){
 
 testFunction = function(req,res){
 		
-		console.log('login request : ' + JSON.stringify(req.body));
-		var data = { username : req.body.username, password : req.body.password };
-		
-		var employees = connection.collection("employees");
-		
-		employees.findOne( { $and : [{ username : data.username } , {password : data.password} ] }, function(err , doc){
-				res.setHeader('Content-Type', 'application/json');
-				assert.equal(err,null);
-				if(doc == null){
-					res.setHeader('404','Not Found');
-					var obj = { message : "Username not found"};
-					res.json(obj);
-					console.log( " Username not found" + err);
-					res.end();
-				}
-				else{
-					res.setHeader('200','OK');
-					res.json(doc);
-					res.end();
-				}
-				
-		});
+
 		
 }
 
@@ -248,7 +255,7 @@ app.post('/groupAvailability',groupAvailable);
 //employees
 app.get('/employees',getAllEmployees);
 app.post('/employee',getEmployeesById);
-//	app.post('/login', loginEmployee);
+app.post('/login', loginEmployee);
 //
 
 
